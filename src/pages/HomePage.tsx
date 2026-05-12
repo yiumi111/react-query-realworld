@@ -11,6 +11,24 @@ const HomePage = () => {
   const [selectedTag, setSelectedTag] = useState('');
   const [articlesInfo, tagsInfo] = useGetArticlesQueries(isGlobal, page, selectedTag);
 
+  const onSelectGlobalFeed = () => {
+    setIsGlobal(true);
+    setSelectedTag('');
+    setPage(1);
+  };
+
+  const onSelectYourFeed = () => {
+    setIsGlobal(false);
+    setSelectedTag('');
+    setPage(1);
+  };
+
+  const onSelectTag = (tag: string) => {
+    setIsGlobal(true);
+    setSelectedTag(tag);
+    setPage(1);
+  };
+
   return (
     <div className="home-page">
       <div className="banner">
@@ -27,19 +45,13 @@ const HomePage = () => {
               <ul className="nav nav-pills outline-active">
                 {isLogin && (
                   <li className="nav-item">
-                    <Link
-                      className={`nav-link ${isGlobal ? '' : 'active'}`}
-                      to="/"
-                      onClick={() => {
-                        setIsGlobal(false);
-                      }}
-                    >
+                    <Link className={`nav-link ${isGlobal ? '' : 'active'}`} to="/" onClick={onSelectYourFeed}>
                       Your Feed
                     </Link>
                   </li>
                 )}
                 <li className="nav-item">
-                  <Link className={`nav-link ${isGlobal ? 'active' : ''}`} to="/" onClick={() => setIsGlobal(true)}>
+                  <Link className={`nav-link ${isGlobal ? 'active' : ''}`} to="/" onClick={onSelectGlobalFeed}>
                     Global Feed
                   </Link>
                 </li>
@@ -54,14 +66,7 @@ const HomePage = () => {
 
               <div className="tag-list">
                 {tagsInfo.data.map((tag: string) => (
-                  <Link
-                    to="/"
-                    key={tag}
-                    className="tag-pill tag-default"
-                    onClick={() => {
-                      setSelectedTag(tag);
-                    }}
-                  >
+                  <Link to="/" key={tag} className="tag-pill tag-default" onClick={() => onSelectTag(tag)}>
                     {tag}
                   </Link>
                 ))}
