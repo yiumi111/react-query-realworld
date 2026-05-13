@@ -1,0 +1,440 @@
+diff --git a/src/pages/EditArticlePage.tsx b/src/pages/EditArticlePage.tsx
+index 1b304f6..f7330ec 100644
+--- a/src/pages/EditArticlePage.tsx
++++ b/src/pages/EditArticlePage.tsx
+@@ -1,22 +1,176 @@
++import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
++import type { IArticle } from '@/interfaces/main';
+ import useInputs from '@/lib/hooks/useInputs';
+ import queryClient from '@/queries/queryClient';
+ import { useUpdateArticleMutation } from '@/queries/articles.query';
+-import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
+-import { useLocation, useNavigate } from 'react-router-dom';
++import { getArticle } from '@/repositories/articles/articlesRepository';
++import { useQuery } from '@tanstack/react-query';
++import { useEffect, useMemo, useRef } from 'react';
++import { useLocation, useNavigate, useParams } from 'react-router-dom';
++
++type EditArticleForm = {
++  slug: string;
++  title: string;
++  description: string;
++  body: string;
++  tag: string;
++  tagList: string[];
++};
++
++type EditArticleDraft = Omit<EditArticleForm, 'slug'>;
++
++const EMPTY_EDIT_ARTICLE_DATA: EditArticleForm = {
++  slug: '',
++  title: '',
++  description: '',
++  body: '',
++  tag: '',
++  tagList: [],
++};
++
++const isDraftStorageAvailable = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
++
++const getEditArticleDraftKey = (slug: string) => `article-draft:edit:${slug}`;
++
++const isEditArticleDraftEmpty = ({ title, description, body, tag, tagList }: EditArticleDraft) => {
++  return !title.trim() && !description.trim() && !body.trim() && !tag.trim() && tagList.length === 0;
++};
++
++const normalizeEditArticleDraft = (draft: Partial<EditArticleDraft>): EditArticleDraft => ({
++  title: typeof draft.title === 'string' ? draft.title : '',
++  description: typeof draft.description === 'string' ? draft.description : '',
++  body: typeof draft.body === 'string' ? draft.body : '',
++  tag: typeof draft.tag === 'string' ? draft.tag : '',
++  tagList: Array.isArray(draft.tagList) ? draft.tagList.filter((tag): tag is string => typeof tag === 'string') : [],
++});
++
++const createEditArticleData = (
++  article: Pick<IArticle, 'slug' | 'title' | 'description' | 'body' | 'tagList'>,
++): EditArticleForm => ({
++  slug: article.slug,
++  title: article.title,
++  description: article.description,
++  body: article.body,
++  tag: '',
++  tagList: article.tagList,
++});
++
++const toEditArticleDraft = ({ title, description, body, tag, tagList }: EditArticleForm): EditArticleDraft => ({
++  title,
++  description,
++  body,
++  tag,
++  tagList,
++});
++
++const readEditArticleDraft = (slug: string): EditArticleDraft | null => {
++  if (!slug || !isDraftStorageAvailable()) {
++    return null;
++  }
++
++  try {
++    const savedDraft = window.localStorage.getItem(getEditArticleDraftKey(slug));
++
++    if (!savedDraft) {
++      return null;
++    }
++
++    const parsedDraft = JSON.parse(savedDraft) as Partial<EditArticleDraft>;
++
++    if (!parsedDraft || typeof parsedDraft !== 'object') {
++      return null;
++    }
++
++    return normalizeEditArticleDraft(parsedDraft);
++  } catch {
++    return null;
++  }
++};
++
++const persistEditArticleDraft = (slug: string, draft: EditArticleDraft) => {
++  if (!slug || !isDraftStorageAvailable()) {
++    return;
++  }
++
++  if (isEditArticleDraftEmpty(draft)) {
++    window.localStorage.removeItem(getEditArticleDraftKey(slug));
++    return;
++  }
++
++  window.localStorage.setItem(getEditArticleDraftKey(slug), JSON.stringify(draft));
++};
++
++const clearEditArticleDraft = (slug: string) => {
++  if (!slug || !isDraftStorageAvailable()) {
++    return;
++  }
++
++  window.localStorage.removeItem(getEditArticleDraftKey(slug));
++};
+ 
+ const EditArticlePage = () => {
+   const { state } = useLocation();
++  const { slug: slugParam = '' } = useParams();
+   const navigate = useNavigate();
++  const hydratedSlugRef = useRef('');
++  const articleFromState = (state ?? null) as Pick<
++    IArticle,
++    'slug' | 'title' | 'description' | 'body' | 'tagList'
++  > | null;
++  const currentSlug = articleFromState?.slug ?? slugParam;
++  const initialDraft = useMemo(() => readEditArticleDraft(currentSlug), [currentSlug]);
++  const [articleData, , setArticleData] = useInputs(
++    initialDraft
++      ? { slug: currentSlug, ...initialDraft }
++      : articleFromState
++      ? createEditArticleData(articleFromState)
++      : { ...EMPTY_EDIT_ARTICLE_DATA, slug: currentSlug },
++  ) as [
++    EditArticleForm,
++    (event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void,
++    (value: EditArticleForm) => void,
++  ];
+ 
+-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
+-    slug: state.slug,
+-    title: state.title,
+-    description: state.description,
+-    body: state.body,
+-    tag: '',
+-    tagList: state.tagList,
++  const articleQuery = useQuery({
++    queryKey: [QUERY_ARTICLE_KEY, currentSlug],
++    queryFn: () => getArticle({ slug: currentSlug }).then((res) => res.data.article),
++    enabled: !!currentSlug && !articleFromState?.slug,
++    staleTime: 20000,
+   });
+ 
++  const sourceArticle = articleFromState ?? articleQuery.data;
++
++  useEffect(() => {
++    if (!currentSlug || hydratedSlugRef.current === currentSlug) {
++      return;
++    }
++
++    const savedDraft = readEditArticleDraft(currentSlug);
++
++    if (savedDraft) {
++      setArticleData({ slug: currentSlug, ...savedDraft });
++      hydratedSlugRef.current = currentSlug;
++      return;
++    }
++
++    if (sourceArticle) {
++      setArticleData(createEditArticleData(sourceArticle));
++      hydratedSlugRef.current = currentSlug;
++    }
++  }, [currentSlug, setArticleData, sourceArticle]);
++
++  const updateArticleData = (nextArticleData: EditArticleForm) => {
++    setArticleData(nextArticleData);
++    persistEditArticleDraft(nextArticleData.slug || currentSlug, toEditArticleDraft(nextArticleData));
++  };
++
++  const onChangeArticleData = (event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
++    updateArticleData({
++      ...articleData,
++      [event.target.name]: event.target.value,
++    });
++  };
++
+   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+     if (event.key === 'Enter') {
+       event.preventDefault();
+@@ -27,7 +181,7 @@ const EditArticlePage = () => {
+   };
+ 
+   const addTag = (newTag: string) => {
+-    setArticleData({
++    updateArticleData({
+       ...articleData,
+       tag: '',
+       tagList: [...articleData.tagList, newTag],
+@@ -35,7 +189,15 @@ const EditArticlePage = () => {
+   };
+ 
+   const removeTag = (target: string) => {
+-    setArticleData({ ...articleData, tagList: articleData.tagList.filter((tag: string) => tag !== target) });
++    updateArticleData({ ...articleData, tagList: articleData.tagList.filter((tag) => tag !== target) });
++  };
++
++  const onClearDraft = () => {
++    clearEditArticleDraft(articleData.slug || currentSlug);
++    hydratedSlugRef.current = '';
++    setArticleData(
++      sourceArticle ? createEditArticleData(sourceArticle) : { ...EMPTY_EDIT_ARTICLE_DATA, slug: currentSlug },
++    );
+   };
+ 
+   const updateArticleMutation = useUpdateArticleMutation();
+@@ -47,6 +209,7 @@ const EditArticlePage = () => {
+       { slug, title, description, body, tagList },
+       {
+         onSuccess: (res) => {
++          clearEditArticleDraft(slug);
+           queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLE_KEY] });
+           const newSlug = res.data.article.slug;
+           navigate(`/article/${newSlug}`, { state: newSlug });
+@@ -104,7 +267,7 @@ const EditArticlePage = () => {
+                   />
+                 </fieldset>
+                 <div className="tag-list">
+-                  {articleData.tagList.map((tag: string) => (
++                  {articleData.tagList.map((tag) => (
+                     <span className="tag-default tag-pill" key={tag}>
+                       <i
+                         role="presentation"
+@@ -116,9 +279,19 @@ const EditArticlePage = () => {
+                     </span>
+                   ))}
+                 </div>
+-                <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
+-                  Update Article
+-                </button>
++                <div className="pull-xs-right">
++                  <button
++                    className="btn btn-sm btn-outline-secondary"
++                    style={{ marginRight: '10px', marginTop: '10px' }}
++                    type="button"
++                    onClick={onClearDraft}
++                  >
++                    Clear Draft
++                  </button>
++                  <button className="btn btn-lg btn-primary" type="submit">
++                    Update Article
++                  </button>
++                </div>
+               </fieldset>
+             </form>
+           </div>
+diff --git a/src/pages/NewArticlePage.tsx b/src/pages/NewArticlePage.tsx
+index 6c458dd..a363498 100644
+--- a/src/pages/NewArticlePage.tsx
++++ b/src/pages/NewArticlePage.tsx
+@@ -1,18 +1,107 @@
++import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
+ import useInputs from '@/lib/hooks/useInputs';
+-import queryClient from '@/queries/queryClient';
+ import { useCreateArticleMutation } from '@/queries/articles.query';
+-import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
++import queryClient from '@/queries/queryClient';
++import { useMemo } from 'react';
+ import { useNavigate } from 'react-router-dom';
+ 
++type ArticleDraftForm = {
++  title: string;
++  description: string;
++  body: string;
++  tag: string;
++  tagList: string[];
++};
++
++const EMPTY_ARTICLE_DATA: ArticleDraftForm = {
++  title: '',
++  description: '',
++  body: '',
++  tag: '',
++  tagList: [],
++};
++
++const NEW_ARTICLE_DRAFT_KEY = 'article-draft:new';
++
++const isDraftStorageAvailable = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
++
++const isArticleDraftEmpty = ({ title, description, body, tag, tagList }: ArticleDraftForm) => {
++  return !title.trim() && !description.trim() && !body.trim() && !tag.trim() && tagList.length === 0;
++};
++
++const normalizeArticleDraft = (draft: Partial<ArticleDraftForm>): ArticleDraftForm => ({
++  title: typeof draft.title === 'string' ? draft.title : '',
++  description: typeof draft.description === 'string' ? draft.description : '',
++  body: typeof draft.body === 'string' ? draft.body : '',
++  tag: typeof draft.tag === 'string' ? draft.tag : '',
++  tagList: Array.isArray(draft.tagList) ? draft.tagList.filter((tag): tag is string => typeof tag === 'string') : [],
++});
++
++const readArticleDraft = (draftKey: string): ArticleDraftForm | null => {
++  if (!isDraftStorageAvailable()) {
++    return null;
++  }
++
++  try {
++    const savedDraft = window.localStorage.getItem(draftKey);
++
++    if (!savedDraft) {
++      return null;
++    }
++
++    const parsedDraft = JSON.parse(savedDraft) as Partial<ArticleDraftForm>;
++
++    if (!parsedDraft || typeof parsedDraft !== 'object') {
++      return null;
++    }
++
++    return normalizeArticleDraft(parsedDraft);
++  } catch {
++    return null;
++  }
++};
++
++const persistArticleDraft = (draftKey: string, draft: ArticleDraftForm) => {
++  if (!isDraftStorageAvailable()) {
++    return;
++  }
++
++  if (isArticleDraftEmpty(draft)) {
++    window.localStorage.removeItem(draftKey);
++    return;
++  }
++
++  window.localStorage.setItem(draftKey, JSON.stringify(draft));
++};
++
++const clearArticleDraft = (draftKey: string) => {
++  if (!isDraftStorageAvailable()) {
++    return;
++  }
++
++  window.localStorage.removeItem(draftKey);
++};
++
+ const NewArticlePage = () => {
+   const navigate = useNavigate();
+-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
+-    title: '',
+-    description: '',
+-    body: '',
+-    tag: '',
+-    tagList: [],
+-  });
++  const initialDraft = useMemo(() => readArticleDraft(NEW_ARTICLE_DRAFT_KEY) ?? EMPTY_ARTICLE_DATA, []);
++  const [articleData, , setArticleData] = useInputs(initialDraft) as [
++    ArticleDraftForm,
++    (event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void,
++    (value: ArticleDraftForm) => void,
++  ];
++
++  const updateArticleData = (nextArticleData: ArticleDraftForm) => {
++    setArticleData(nextArticleData);
++    persistArticleDraft(NEW_ARTICLE_DRAFT_KEY, nextArticleData);
++  };
++
++  const onChangeArticleData = (event: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
++    updateArticleData({
++      ...articleData,
++      [event.target.name]: event.target.value,
++    });
++  };
+ 
+   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+     if (event.key === 'Enter') {
+@@ -24,7 +113,7 @@ const NewArticlePage = () => {
+   };
+ 
+   const addTag = (newTag: string) => {
+-    setArticleData({
++    updateArticleData({
+       ...articleData,
+       tag: '',
+       tagList: [...articleData.tagList, newTag],
+@@ -32,7 +121,12 @@ const NewArticlePage = () => {
+   };
+ 
+   const removeTag = (target: string) => {
+-    setArticleData({ ...articleData, tagList: articleData.tagList.filter((tag: string) => tag !== target) });
++    updateArticleData({ ...articleData, tagList: articleData.tagList.filter((tag) => tag !== target) });
++  };
++
++  const onClearDraft = () => {
++    clearArticleDraft(NEW_ARTICLE_DRAFT_KEY);
++    setArticleData(EMPTY_ARTICLE_DATA);
+   };
+ 
+   const createArticleMutation = useCreateArticleMutation();
+@@ -44,6 +138,7 @@ const NewArticlePage = () => {
+       { title, description, body, tagList },
+       {
+         onSuccess: (res) => {
++          clearArticleDraft(NEW_ARTICLE_DRAFT_KEY);
+           queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
+           const slug = res.data.article.slug;
+           navigate(`/article/${slug}`, { state: slug });
+@@ -101,7 +196,7 @@ const NewArticlePage = () => {
+                   />
+                 </fieldset>
+                 <div className="tag-list">
+-                  {articleData.tagList.map((tag: string) => (
++                  {articleData.tagList.map((tag) => (
+                     <span className="tag-default tag-pill" key={tag}>
+                       <i
+                         role="presentation"
+@@ -113,9 +208,19 @@ const NewArticlePage = () => {
+                     </span>
+                   ))}
+                 </div>
+-                <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
+-                  Publish Article
+-                </button>
++                <div className="pull-xs-right">
++                  <button
++                    className="btn btn-sm btn-outline-secondary"
++                    style={{ marginRight: '10px', marginTop: '10px' }}
++                    type="button"
++                    onClick={onClearDraft}
++                  >
++                    Clear Draft
++                  </button>
++                  <button className="btn btn-lg btn-primary" type="submit">
++                    Publish Article
++                  </button>
++                </div>
+               </fieldset>
+             </form>
+           </div>
