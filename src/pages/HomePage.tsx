@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FeedList from '@/components/feed/FeedList';
 import { useGetArticlesQueries } from '@/queries/articles.query';
@@ -10,6 +10,10 @@ const HomePage = () => {
   const [isGlobal, setIsGlobal] = useState(true);
   const [selectedTag, setSelectedTag] = useState('');
   const [articlesInfo, tagsInfo] = useGetArticlesQueries(isGlobal, page, selectedTag);
+
+  useEffect(() => {
+    setPage(1);
+  }, [isGlobal, selectedTag]);
 
   return (
     <div className="home-page">
@@ -39,25 +43,37 @@ const HomePage = () => {
                   </li>
                 )}
                 <li className="nav-item">
-                  <Link className={`nav-link ${isGlobal ? 'active' : ''}`} to="/" onClick={() => setIsGlobal(true)}>
+                  <Link
+                    className={`nav-link ${isGlobal ? 'active' : ''}`}
+                    to="/"
+                    onClick={() => setIsGlobal(true)}
+                  >
                     Global Feed
                   </Link>
                 </li>
               </ul>
             </div>
-            <FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />
+            {selectedTag && (
+              <div className="feed-toggle">
+                <ul className="nav nav-pills outline-active">
+                  <li className="nav-item">
+                    <span className="nav-link active">{selectedTag}</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+            <FeedList articlesInfo={articlesInfo} page={page} setPage={setPage} />
           </div>
 
           <div className="col-md-3">
             <div className="sidebar">
               <p>Popular Tags</p>
-
               <div className="tag-list">
-                {tagsInfo.data.map((tag: string) => (
+                {tagsInfo.tags?.map((tag: string) => (
                   <Link
-                    to="/"
                     key={tag}
-                    className="tag-pill tag-default"
+                    className={`tag-pill tag-default ${selectedTag === tag ? 'active' : ''}`}
+                    to="/"
                     onClick={() => {
                       setSelectedTag(tag);
                     }}

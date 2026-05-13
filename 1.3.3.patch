@@ -1,0 +1,78 @@
+diff --git a/src/components/feed/FeedList.tsx b/src/components/feed/FeedList.tsx
+index e357a2b..4288cd8 100644
+--- a/src/components/feed/FeedList.tsx
++++ b/src/components/feed/FeedList.tsx
+@@ -30,7 +30,7 @@ const FeedList = ({ articlesInfo, page, setPage }: IFeedListProps) => {
+       <nav>
+         <ul className="pagination">
+           {articlesCount > UNIT_PER_PAGE &&
+-            generateOneToNArray(Math.floor(articlesCount / UNIT_PER_PAGE)).map((value) => (
++            generateOneToNArray(Math.ceil(articlesCount / UNIT_PER_PAGE)).map((value) => (
+               <li
+                 key={value}
+                 role="presentation"
+diff --git a/src/pages/HomePage.tsx b/src/pages/HomePage.tsx
+index 81376c8..5b4ccb1 100644
+--- a/src/pages/HomePage.tsx
++++ b/src/pages/HomePage.tsx
+@@ -1,4 +1,4 @@
+-import { useState, useContext } from 'react';
++import { useState, useContext, useEffect } from 'react';
+ import { Link } from 'react-router-dom';
+ import FeedList from '@/components/feed/FeedList';
+ import { useGetArticlesQueries } from '@/queries/articles.query';
+@@ -11,6 +11,10 @@ const HomePage = () => {
+   const [selectedTag, setSelectedTag] = useState('');
+   const [articlesInfo, tagsInfo] = useGetArticlesQueries(isGlobal, page, selectedTag);
+ 
++  useEffect(() => {
++    setPage(1);
++  }, [isGlobal, selectedTag]);
++
+   return (
+     <div className="home-page">
+       <div className="banner">
+@@ -39,25 +43,37 @@ const HomePage = () => {
+                   </li>
+                 )}
+                 <li className="nav-item">
+-                  <Link className={`nav-link ${isGlobal ? 'active' : ''}`} to="/" onClick={() => setIsGlobal(true)}>
++                  <Link
++                    className={`nav-link ${isGlobal ? 'active' : ''}`}
++                    to="/"
++                    onClick={() => setIsGlobal(true)}
++                  >
+                     Global Feed
+                   </Link>
+                 </li>
+               </ul>
+             </div>
+-            <FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />
++            {selectedTag && (
++              <div className="feed-toggle">
++                <ul className="nav nav-pills outline-active">
++                  <li className="nav-item">
++                    <span className="nav-link active">{selectedTag}</span>
++                  </li>
++                </ul>
++              </div>
++            )}
++            <FeedList articlesInfo={articlesInfo} page={page} setPage={setPage} />
+           </div>
+ 
+           <div className="col-md-3">
+             <div className="sidebar">
+               <p>Popular Tags</p>
+-
+               <div className="tag-list">
+-                {tagsInfo.data.map((tag: string) => (
++                {tagsInfo.tags?.map((tag: string) => (
+                   <Link
+-                    to="/"
+                     key={tag}
+-                    className="tag-pill tag-default"
++                    className={`tag-pill tag-default ${selectedTag === tag ? 'active' : ''}`}
++                    to="/"
+                     onClick={() => {
+                       setSelectedTag(tag);
+                     }}
