@@ -28,10 +28,12 @@ const HomePage = () => {
                 {isLogin && (
                   <li className="nav-item">
                     <Link
-                      className={`nav-link ${isGlobal ? '' : 'active'}`}
+                      className={`nav-link ${!isGlobal && !selectedTag ? 'active' : ''}`}
                       to="/"
                       onClick={() => {
                         setIsGlobal(false);
+                        setSelectedTag('');
+                        setPage(1);
                       }}
                     >
                       Your Feed
@@ -39,10 +41,25 @@ const HomePage = () => {
                   </li>
                 )}
                 <li className="nav-item">
-                  <Link className={`nav-link ${isGlobal ? 'active' : ''}`} to="/" onClick={() => setIsGlobal(true)}>
+                  <Link
+                    className={`nav-link ${isGlobal && !selectedTag ? 'active' : ''}`}
+                    to="/"
+                    onClick={() => {
+                      setIsGlobal(true);
+                      setSelectedTag('');
+                      setPage(1);
+                    }}
+                  >
                     Global Feed
                   </Link>
                 </li>
+                {selectedTag && (
+                  <li className="nav-item">
+                    <Link className="nav-link active" to="/">
+                      #{selectedTag}
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
             <FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />
@@ -60,6 +77,8 @@ const HomePage = () => {
                     className="tag-pill tag-default"
                     onClick={() => {
                       setSelectedTag(tag);
+                      setIsGlobal(true);
+                      setPage(1);
                     }}
                   >
                     {tag}
