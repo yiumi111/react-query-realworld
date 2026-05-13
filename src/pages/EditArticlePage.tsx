@@ -1,4 +1,5 @@
 import useInputs from '@/lib/hooks/useInputs';
+import { useDraft, getDraft } from '@/lib/hooks/useDraft';
 import queryClient from '@/queries/queryClient';
 import { useUpdateArticleMutation } from '@/queries/articles.query';
 import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
@@ -8,14 +9,33 @@ const EditArticlePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
+  const DRAFT_KEY = `article-draft-edit-${state.slug}`;
+
+  const initialData = {
     slug: state.slug,
     title: state.title,
     description: state.description,
     body: state.body,
     tag: '',
     tagList: state.tagList,
-  });
+  };
+
+  const savedDraft = getDraft(DRAFT_KEY);
+  const [articleData, onChangeArticleData, setArticleData] = useInputs(
+    savedDraft
+      ? { ...initialData, title: savedDraft.title, description: savedDraft.description, body: savedDraft.body, tagList: savedDraft.tagList }
+      : initialData,
+  );
+
+  const { clear: clearDraftFn } = useDraft(
+    DRAFT_KEY,
+    {
+      title: articleData.title,
+      description: articleData.description,
+      body: articleData.body,
+      tagList: articleData.tagList,
+    },
+  );
 
   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -48,11 +68,17 @@ const EditArticlePage = () => {
       {
         onSuccess: (res) => {
           queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLE_KEY] });
+          clearDraftFn();
           const newSlug = res.data.article.slug;
           navigate(`/article/${newSlug}`, { state: newSlug });
         },
       },
     );
+  };
+
+  const handleClearDraft = () => {
+    clearDraftFn();
+    setArticleData({ ...initialData, tag: '' });
   };
 
   return (
@@ -119,6 +145,16 @@ const EditArticlePage = () => {
                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
                   Update Article
                 </button>
+                {savedDraft && (
+                  <button
+                    type="button"
+                    className="btn btn-lg pull-xs-right btn-outline-secondary"
+                    style={{ marginRight: '10px' }}
+                    onClick={handleClearDraft}
+                  >
+                    Clear Draft
+                  </button>
+                )}
               </fieldset>
             </form>
           </div>
