@@ -3,16 +3,61 @@ import queryClient from '@/queries/queryClient';
 import { useCreateArticleMutation } from '@/queries/articles.query';
 import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+
+const DRAFT_KEY = 'article_draft_new';
 
 const NewArticlePage = () => {
   const navigate = useNavigate();
-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
-    title: '',
-    description: '',
-    body: '',
-    tag: '',
-    tagList: [],
-  });
+
+  const initialState = useMemo(() => {
+    const defaultState = {
+      title: '',
+      description: '',
+      body: '',
+      tag: '',
+      tagList: [],
+    };
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        return {
+          ...defaultState,
+          title: parsed.title || '',
+          description: parsed.description || '',
+          body: parsed.body || '',
+          tagList: parsed.tagList || [],
+        };
+      } catch (e) {
+        return defaultState;
+      }
+    }
+    return defaultState;
+  }, []);
+
+  const [articleData, onChangeArticleData, setArticleData] = useInputs(initialState);
+
+  useEffect(() => {
+    const draftToSave = {
+      title: articleData.title,
+      description: articleData.description,
+      body: articleData.body,
+      tagList: articleData.tagList,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
+  }, [articleData.title, articleData.description, articleData.body, articleData.tagList]);
+
+  const onClearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setArticleData({
+      title: '',
+      description: '',
+      body: '',
+      tag: '',
+      tagList: [],
+    });
+  };
 
   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -115,6 +160,14 @@ const NewArticlePage = () => {
                 </div>
                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
                   Publish Article
+                </button>
+                <button 
+                  className="btn btn-lg pull-xs-right btn-outline-secondary" 
+                  type="button" 
+                  style={{ marginRight: '10px' }}
+                  onClick={onClearDraft}
+                >
+                  清空草稿
                 </button>
               </fieldset>
             </form>

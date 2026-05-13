@@ -3,19 +3,65 @@ import queryClient from '@/queries/queryClient';
 import { useUpdateArticleMutation } from '@/queries/articles.query';
 import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
 
 const EditArticlePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
-    slug: state.slug,
-    title: state.title,
-    description: state.description,
-    body: state.body,
-    tag: '',
-    tagList: state.tagList,
-  });
+  const slug = state.slug;
+  const DRAFT_KEY = `article_draft_edit_${slug}`;
+
+  const initialState = useMemo(() => {
+    const defaultState = {
+      slug: state.slug,
+      title: state.title,
+      description: state.description,
+      body: state.body,
+      tag: '',
+      tagList: state.tagList,
+    };
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        return {
+          ...defaultState,
+          title: parsed.title || '',
+          description: parsed.description || '',
+          body: parsed.body || '',
+          tagList: parsed.tagList || [],
+        };
+      } catch (e) {
+        return defaultState;
+      }
+    }
+    return defaultState;
+  }, [DRAFT_KEY, state]);
+
+  const [articleData, onChangeArticleData, setArticleData] = useInputs(initialState);
+
+  useEffect(() => {
+    const draftToSave = {
+      title: articleData.title,
+      description: articleData.description,
+      body: articleData.body,
+      tagList: articleData.tagList,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
+  }, [articleData.title, articleData.description, articleData.body, articleData.tagList, DRAFT_KEY]);
+
+  const onClearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setArticleData({
+      slug: state.slug,
+      title: state.title,
+      description: state.description,
+      body: state.body,
+      tag: '',
+      tagList: state.tagList,
+    });
+  };
 
   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -118,6 +164,14 @@ const EditArticlePage = () => {
                 </div>
                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
                   Update Article
+                </button>
+                <button 
+                  className="btn btn-lg pull-xs-right btn-outline-secondary" 
+                  type="button" 
+                  style={{ marginRight: '10px' }}
+                  onClick={onClearDraft}
+                >
+                  清空草稿
                 </button>
               </fieldset>
             </form>

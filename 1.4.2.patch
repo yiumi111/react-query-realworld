@@ -1,0 +1,181 @@
+diff --git a/src/pages/EditArticlePage.tsx b/src/pages/EditArticlePage.tsx
+index 1b304f6..05bf346 100644
+--- a/src/pages/EditArticlePage.tsx
++++ b/src/pages/EditArticlePage.tsx
+@@ -3,19 +3,65 @@ import queryClient from '@/queries/queryClient';
+ import { useUpdateArticleMutation } from '@/queries/articles.query';
+ import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
+ import { useLocation, useNavigate } from 'react-router-dom';
++import { useEffect, useMemo } from 'react';
+ 
+ const EditArticlePage = () => {
+   const { state } = useLocation();
+   const navigate = useNavigate();
+ 
+-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
+-    slug: state.slug,
+-    title: state.title,
+-    description: state.description,
+-    body: state.body,
+-    tag: '',
+-    tagList: state.tagList,
+-  });
++  const slug = state.slug;
++  const DRAFT_KEY = `article_draft_edit_${slug}`;
++
++  const initialState = useMemo(() => {
++    const defaultState = {
++      slug: state.slug,
++      title: state.title,
++      description: state.description,
++      body: state.body,
++      tag: '',
++      tagList: state.tagList,
++    };
++    const savedDraft = localStorage.getItem(DRAFT_KEY);
++    if (savedDraft) {
++      try {
++        const parsed = JSON.parse(savedDraft);
++        return {
++          ...defaultState,
++          title: parsed.title || '',
++          description: parsed.description || '',
++          body: parsed.body || '',
++          tagList: parsed.tagList || [],
++        };
++      } catch (e) {
++        return defaultState;
++      }
++    }
++    return defaultState;
++  }, [DRAFT_KEY, state]);
++
++  const [articleData, onChangeArticleData, setArticleData] = useInputs(initialState);
++
++  useEffect(() => {
++    const draftToSave = {
++      title: articleData.title,
++      description: articleData.description,
++      body: articleData.body,
++      tagList: articleData.tagList,
++    };
++    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
++  }, [articleData.title, articleData.description, articleData.body, articleData.tagList, DRAFT_KEY]);
++
++  const onClearDraft = () => {
++    localStorage.removeItem(DRAFT_KEY);
++    setArticleData({
++      slug: state.slug,
++      title: state.title,
++      description: state.description,
++      body: state.body,
++      tag: '',
++      tagList: state.tagList,
++    });
++  };
+ 
+   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+     if (event.key === 'Enter') {
+@@ -119,6 +165,14 @@ const EditArticlePage = () => {
+                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
+                   Update Article
+                 </button>
++                <button 
++                  className="btn btn-lg pull-xs-right btn-outline-secondary" 
++                  type="button" 
++                  style={{ marginRight: '10px' }}
++                  onClick={onClearDraft}
++                >
++                  清空草稿
++                </button>
+               </fieldset>
+             </form>
+           </div>
+diff --git a/src/pages/NewArticlePage.tsx b/src/pages/NewArticlePage.tsx
+index 6c458dd..04c3e60 100644
+--- a/src/pages/NewArticlePage.tsx
++++ b/src/pages/NewArticlePage.tsx
+@@ -3,16 +3,61 @@ import queryClient from '@/queries/queryClient';
+ import { useCreateArticleMutation } from '@/queries/articles.query';
+ import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
+ import { useNavigate } from 'react-router-dom';
++import { useEffect, useMemo } from 'react';
++
++const DRAFT_KEY = 'article_draft_new';
+ 
+ const NewArticlePage = () => {
+   const navigate = useNavigate();
+-  const [articleData, onChangeArticleData, setArticleData] = useInputs({
+-    title: '',
+-    description: '',
+-    body: '',
+-    tag: '',
+-    tagList: [],
+-  });
++
++  const initialState = useMemo(() => {
++    const defaultState = {
++      title: '',
++      description: '',
++      body: '',
++      tag: '',
++      tagList: [],
++    };
++    const savedDraft = localStorage.getItem(DRAFT_KEY);
++    if (savedDraft) {
++      try {
++        const parsed = JSON.parse(savedDraft);
++        return {
++          ...defaultState,
++          title: parsed.title || '',
++          description: parsed.description || '',
++          body: parsed.body || '',
++          tagList: parsed.tagList || [],
++        };
++      } catch (e) {
++        return defaultState;
++      }
++    }
++    return defaultState;
++  }, []);
++
++  const [articleData, onChangeArticleData, setArticleData] = useInputs(initialState);
++
++  useEffect(() => {
++    const draftToSave = {
++      title: articleData.title,
++      description: articleData.description,
++      body: articleData.body,
++      tagList: articleData.tagList,
++    };
++    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
++  }, [articleData.title, articleData.description, articleData.body, articleData.tagList]);
++
++  const onClearDraft = () => {
++    localStorage.removeItem(DRAFT_KEY);
++    setArticleData({
++      title: '',
++      description: '',
++      body: '',
++      tag: '',
++      tagList: [],
++    });
++  };
+ 
+   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+     if (event.key === 'Enter') {
+@@ -116,6 +161,14 @@ const NewArticlePage = () => {
+                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
+                   Publish Article
+                 </button>
++                <button 
++                  className="btn btn-lg pull-xs-right btn-outline-secondary" 
++                  type="button" 
++                  style={{ marginRight: '10px' }}
++                  onClick={onClearDraft}
++                >
++                  清空草稿
++                </button>
+               </fieldset>
+             </form>
+           </div>
