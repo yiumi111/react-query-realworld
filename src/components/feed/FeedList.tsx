@@ -30,7 +30,7 @@ const FeedList = ({ articlesInfo, page, setPage }: IFeedListProps) => {
       <nav>
         <ul className="pagination">
           {articlesCount > UNIT_PER_PAGE &&
-            generateOneToNArray(Math.floor(articlesCount / UNIT_PER_PAGE)).map((value) => (
+            generateOneToNArray(Math.ceil(articlesCount / UNIT_PER_PAGE)).map((value) => (
               <li
                 key={value}
                 role="presentation"
