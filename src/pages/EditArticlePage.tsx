@@ -1,12 +1,17 @@
+import { useEffect } from 'react';
 import useInputs from '@/lib/hooks/useInputs';
 import queryClient from '@/queries/queryClient';
 import { useUpdateArticleMutation } from '@/queries/articles.query';
 import { QUERY_ARTICLE_KEY } from '@/constants/query.constant';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+const DRAFT_KEY_EDIT_PREFIX = 'edit-article-draft-';
+
 const EditArticlePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { slug } = state;
+  const draftKey = DRAFT_KEY_EDIT_PREFIX + slug;
 
   const [articleData, onChangeArticleData, setArticleData] = useInputs({
     slug: state.slug,
@@ -16,6 +21,42 @@ const EditArticlePage = () => {
     tag: '',
     tagList: state.tagList,
   });
+
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setArticleData((prev: any) => ({
+          ...prev,
+          title: draft.title || prev.title,
+          description: draft.description || prev.description,
+          body: draft.body || prev.body,
+          tagList: draft.tagList || prev.tagList,
+        }));
+      } catch (error) {
+        console.error('Failed to parse draft:', error);
+      }
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    const { title, description, body, tagList } = articleData;
+    const draft = { title, description, body, tagList };
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }, [articleData.title, articleData.description, articleData.body, articleData.tagList, draftKey]);
+
+  const clearDraft = () => {
+    localStorage.removeItem(draftKey);
+    setArticleData({
+      slug: state.slug,
+      title: state.title,
+      description: state.description,
+      body: state.body,
+      tag: '',
+      tagList: state.tagList,
+    });
+  };
 
   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -48,6 +89,7 @@ const EditArticlePage = () => {
       {
         onSuccess: (res) => {
           queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLE_KEY] });
+          localStorage.removeItem(draftKey);
           const newSlug = res.data.article.slug;
           navigate(`/article/${newSlug}`, { state: newSlug });
         },
@@ -118,6 +160,14 @@ const EditArticlePage = () => {
                 </div>
                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
                   Update Article
+                </button>
+                <button
+                  className="btn btn-lg pull-xs-right btn-secondary"
+                  type="button"
+                  onClick={clearDraft}
+                  style={{ marginRight: '10px' }}
+                >
+                  Clear Draft
                 </button>
               </fieldset>
             </form>

@@ -1,8 +1,11 @@
+import { useEffect } from 'react';
 import useInputs from '@/lib/hooks/useInputs';
 import queryClient from '@/queries/queryClient';
 import { useCreateArticleMutation } from '@/queries/articles.query';
 import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
 import { useNavigate } from 'react-router-dom';
+
+const DRAFT_KEY_NEW = 'new-article-draft';
 
 const NewArticlePage = () => {
   const navigate = useNavigate();
@@ -13,6 +16,41 @@ const NewArticlePage = () => {
     tag: '',
     tagList: [],
   });
+
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(DRAFT_KEY_NEW);
+    if (savedDraft) {
+      try {
+        const draft = JSON.parse(savedDraft);
+        setArticleData((prev: any) => ({
+          ...prev,
+          title: draft.title || '',
+          description: draft.description || '',
+          body: draft.body || '',
+          tagList: draft.tagList || [],
+        }));
+      } catch (error) {
+        console.error('Failed to parse draft:', error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const { title, description, body, tagList } = articleData;
+    const draft = { title, description, body, tagList };
+    localStorage.setItem(DRAFT_KEY_NEW, JSON.stringify(draft));
+  }, [articleData.title, articleData.description, articleData.body, articleData.tagList]);
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY_NEW);
+    setArticleData({
+      title: '',
+      description: '',
+      body: '',
+      tag: '',
+      tagList: [],
+    });
+  };
 
   const onEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -45,6 +83,7 @@ const NewArticlePage = () => {
       {
         onSuccess: (res) => {
           queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
+          localStorage.removeItem(DRAFT_KEY_NEW);
           const slug = res.data.article.slug;
           navigate(`/article/${slug}`, { state: slug });
         },
@@ -115,6 +154,14 @@ const NewArticlePage = () => {
                 </div>
                 <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
                   Publish Article
+                </button>
+                <button
+                  className="btn btn-lg pull-xs-right btn-secondary"
+                  type="button"
+                  onClick={clearDraft}
+                  style={{ marginRight: '10px' }}
+                >
+                  Clear Draft
                 </button>
               </fieldset>
             </form>
