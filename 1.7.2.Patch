@@ -1,0 +1,43 @@
+diff --git a/craco.config.js b/craco.config.js
+index 27bdf9f..224ee8f 100644
+--- a/craco.config.js
++++ b/craco.config.js
+@@ -11,4 +11,11 @@ module.exports = {
+     },
+     plugins: [new TsconfigPathsPlugin({ configFile: tsConfigPath })],
+   },
++  jest: {
++    configure: {
++      moduleNameMapper: {
++        '^@/(.*)$': '<rootDir>/src/$1'
++      }
++    }
++  }
+ };
+\ No newline at end of file
+diff --git a/package.json b/package.json
+index bbe6f1b..65dbac7 100644
+--- a/package.json
++++ b/package.json
+@@ -30,7 +30,7 @@
+   "scripts": {
+     "start": "craco start",
+     "build": "craco build",
+-    "test": "jest",
++    "test": "craco test",
+     "eject": "craco eject"
+   },
+   "eslintConfig": {
+diff --git a/src/components/article/Comment.tsx b/src/components/article/Comment.tsx
+index 4846c50..2dc9e5d 100644
+--- a/src/components/article/Comment.tsx
++++ b/src/components/article/Comment.tsx
+@@ -80,7 +80,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+             {data.username === comment.author.username ? (
+               <span className="mod-options">
+                 {/* <i className="ion-edit"></i> */}
+-                <i role="presentation" className="ion-trash-a" onClick={() => onDelete(slug, comment.id)}></i>
++                <i role="presentation" className="ion-trash-a" data-testid="delete-comment-btn" onClick={() => onDelete(slug, comment.id)}></i>
+               </span>
+             ) : (
+               <></>

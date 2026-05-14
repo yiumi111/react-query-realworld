@@ -11,4 +11,11 @@ module.exports = {
     },
     plugins: [new TsconfigPathsPlugin({ configFile: tsConfigPath })],
   },
+  jest: {
+    configure: {
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1'
+      }
+    }
+  }
 };

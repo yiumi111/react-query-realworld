@@ -30,7 +30,7 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "jest",
+    "test": "craco test",
     "eject": "craco eject"
   },
   "eslintConfig": {
