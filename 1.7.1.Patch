@@ -1,0 +1,35 @@
+diff --git a/babel.config.js b/babel.config.js
+index 9ba90d5..286a34c 100644
+--- a/babel.config.js
++++ b/babel.config.js
+@@ -1,6 +1,7 @@
+ module.exports = {
+   presets: [
+-    ['@babel/preset-env', {targets: {node: 'current'}}],
++    ['@babel/preset-env', { targets: { node: 'current' } }],
++    ['@babel/preset-react', { runtime: 'automatic' }],
+     '@babel/preset-typescript',
+   ],
+-};
+\ No newline at end of file
++};
+diff --git a/package.json b/package.json
+index bbe6f1b..05e19d1 100644
+--- a/package.json
++++ b/package.json
+@@ -33,6 +33,15 @@
+     "test": "jest",
+     "eject": "craco eject"
+   },
++  "jest": {
++    "testEnvironment": "jsdom",
++    "moduleNameMapper": {
++      "^@/(.*)$": "<rootDir>/src/$1"
++    },
++    "transform": {
++      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
++    }
++  },
+   "eslintConfig": {
+     "extends": [
+       "react-app",

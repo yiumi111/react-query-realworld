@@ -33,6 +33,15 @@
     "test": "jest",
     "eject": "craco eject"
   },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "transform": {
+      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+    }
+  },
   "eslintConfig": {
     "extends": [
       "react-app",
