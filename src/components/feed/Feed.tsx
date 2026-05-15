@@ -1,10 +1,5 @@
-import { useFavoriteArticleMutation, useUnfavoriteArticleMutation } from '@/queries/articles.query';
-import { Link, useNavigate } from 'react-router-dom';
-import { useContext } from 'react';
-import { UserContext } from '@/contexts/UserContextProvider';
-import routerMeta from '@/lib/routerMeta';
-import queryClient from '@/queries/queryClient';
-import { QUERY_ARTICLES_KEY } from '@/constants/query.constant';
+import { Link } from 'react-router-dom';
+import { useArticleFavorite } from '@/lib/hooks/useArticleFavorite';
 import convertToDate from '@/lib/utils/convertToDate';
 import { IArticle } from '@/interfaces/main';
 
@@ -13,49 +8,14 @@ interface IFeedProps {
 }
 
 const Feed = ({ article }: IFeedProps) => {
-  const { isLogin } = useContext(UserContext);
-  const navigate = useNavigate();
-  const favoriteArticleMutation = useFavoriteArticleMutation();
-  const unfavoriteArticleMutation = useUnfavoriteArticleMutation();
-
-  const onToggleFavorite = () => {
-    const { slug } = article;
-
-    if (!isLogin) {
-      navigate(routerMeta.SignInPage.path);
-      return;
-    }
-
-    if (article.favorited) {
-      unfavoriteArticleMutation.mutate(
-        { slug },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
-          },
-        },
-      );
-    }
-
-    if (!article.favorited) {
-      favoriteArticleMutation.mutate(
-        { slug },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
-          },
-        },
-      );
-      return;
-    }
-  };
+  const { toggleFavorite, isFavoriteLoading } = useArticleFavorite();
 
   return (
     <div role="presentation" className="article-preview">
       <div className="article-meta">
-        <a href="profile.html">
+        <Link to={`/profile/${article.author.username}`} state={article.author.username}>
           <img src={article.author.image} alt="profile" />
-        </a>
+        </Link>
         <div className="info">
           <Link to={`/profile/${article.author.username}`} state={article.author.username} className="author">
             {article.author.username}
@@ -65,7 +25,8 @@ const Feed = ({ article }: IFeedProps) => {
         <button
           type="button"
           className={`btn ${article.favorited ? 'btn-primary' : 'btn-outline-primary'} btn-sm pull-xs-right`}
-          onClick={() => onToggleFavorite()}
+          onClick={() => toggleFavorite(article.slug, article.favorited)}
+          disabled={isFavoriteLoading}
         >
           <i className="ion-heart"></i> {article.favoritesCount}
         </button>

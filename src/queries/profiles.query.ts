@@ -1,10 +1,10 @@
 import { QUERY_ARTICLES_KEY, QUERY_PROFILE_KEY } from '@/constants/query.constant';
 import { getArticles } from '@/repositories/articles/articlesRepository';
 import { followUser, getProfile, unfollowUser } from '@/repositories/profiles/profileRepository';
-import { useMutation, useQueries } from '@tanstack/react-query';
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 
-export const useGetProfileQueries = (username: string, page: number, isFavorited: boolean) => {
-  return useQueries({
+export const useGetProfileQueries = (username: string, page: number, isFavorited: boolean) =>
+  useQueries({
     queries: [
       {
         queryKey: [QUERY_PROFILE_KEY, username],
@@ -18,8 +18,75 @@ export const useGetProfileQueries = (username: string, page: number, isFavorited
       },
     ],
   });
+
+export const useFollowUserMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation(followUser, {
+    onSuccess: (data, variables) => {
+      const { username } = variables;
+      const updatedProfile = data.data.profile;
+
+      // 更新 Profile 页面缓存
+      queryClient.setQueryData([QUERY_PROFILE_KEY, username], updatedProfile);
+
+      // 更新所有文章列表中该作者的 following 状态
+      queryClient.setQueriesData<{ articles: any[]; articlesCount: number }>(
+        { queryKey: [QUERY_ARTICLES_KEY] },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            articles: oldData.articles.map((article) => {
+              if (article.author.username === username) {
+                return {
+                  ...article,
+                  author: {
+                    ...article.author,
+                    following: true,
+                  },
+                };
+              }
+              return article;
+            }),
+          };
+        },
+      );
+    },
+  });
 };
 
-export const useFollowUserMutation = () => useMutation(followUser);
+export const useUnFollowUserMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation(unfollowUser, {
+    onSuccess: (data, variables) => {
+      const { username } = variables;
+      const updatedProfile = data.data.profile;
 
-export const useUnFollowUserMutation = () => useMutation(unfollowUser);
+      // 更新 Profile 页面缓存
+      queryClient.setQueryData([QUERY_PROFILE_KEY, username], updatedProfile);
+
+      // 更新所有文章列表中该作者的 following 状态
+      queryClient.setQueriesData<{ articles: any[]; articlesCount: number }>(
+        { queryKey: [QUERY_ARTICLES_KEY] },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            articles: oldData.articles.map((article) => {
+              if (article.author.username === username) {
+                return {
+                  ...article,
+                  author: {
+                    ...article.author,
+                    following: false,
+                  },
+                };
+              }
+              return article;
+            }),
+          };
+        },
+      );
+    },
+  });
+};

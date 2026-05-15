@@ -1,44 +1,16 @@
-import { QUERY_PROFILE_KEY } from '@/constants/query.constant';
-import queryClient from '@/queries/queryClient';
 import routerMeta from '@/lib/routerMeta';
-import { useFollowUserMutation, useUnFollowUserMutation } from '@/queries/profiles.query';
+import { useProfileFollow } from '@/lib/hooks/useProfileFollow';
 import { useGetUserQuery } from '@/queries/user.query';
 import { Link } from 'react-router-dom';
+
 interface IFollowButton {
   profileName: string;
   isFollow: boolean;
 }
+
 const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
   const { data } = useGetUserQuery();
-  const followUserMutation = useFollowUserMutation();
-  const unfollowUserMutation = useUnFollowUserMutation();
-
-  const onToggleFollow = () => {
-    const username = profileName;
-    if (isFollow) {
-      unfollowUserMutation.mutate(
-        { username },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
-          },
-        },
-      );
-      return;
-    }
-
-    if (!isFollow) {
-      followUserMutation.mutate(
-        { username },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
-          },
-        },
-      );
-      return;
-    }
-  };
+  const { toggleFollow, isFollowLoading } = useProfileFollow();
 
   return (
     <>
@@ -50,7 +22,8 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
         <button
           type="button"
           className={`btn btn-sm btn-outline-${isFollow ? 'primary' : 'secondary'} action-btn`}
-          onClick={() => onToggleFollow()}
+          onClick={() => toggleFollow(profileName, isFollow)}
+          disabled={isFollowLoading}
         >
           <i className="ion-plus-round"></i>
           &nbsp; Follow {profileName}

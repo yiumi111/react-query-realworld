@@ -12,10 +12,11 @@ import {
   unfavoriteArticle,
 } from '@/repositories/articles/articlesRepository';
 import { getTags } from '@/repositories/tags/tagsRepository';
-import { useMutation, useQueries } from '@tanstack/react-query';
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import { IArticle } from '@/interfaces/main';
 
-export const useGetArticlesQueries = (isGlobal: boolean, page: number, selectedTag: string) => {
-  return useQueries({
+export const useGetArticlesQueries = (isGlobal: boolean, page: number, selectedTag: string) =>
+  useQueries({
     queries: [
       {
         queryKey: [QUERY_ARTICLES_KEY, isGlobal, selectedTag, page],
@@ -29,10 +30,9 @@ export const useGetArticlesQueries = (isGlobal: boolean, page: number, selectedT
       },
     ],
   });
-};
 
-export const useGetArticleQueries = (slug: string) => {
-  return useQueries({
+export const useGetArticleQueries = (slug: string) =>
+  useQueries({
     queries: [
       {
         queryKey: [QUERY_ARTICLE_KEY, slug],
@@ -46,7 +46,6 @@ export const useGetArticleQueries = (slug: string) => {
       },
     ],
   });
-};
 
 export const useCreateArticleMutation = () => useMutation(createArticle);
 
@@ -58,6 +57,52 @@ export const useCreateCommentMutation = () => useMutation(createComment);
 
 export const useDeleteCommentMutation = () => useMutation(deleteComment);
 
-export const useFavoriteArticleMutation = () => useMutation(favoriteArticle);
+export const useFavoriteArticleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation(favoriteArticle, {
+    onSuccess: (data, variables) => {
+      const { slug } = variables;
+      const updatedArticle = data.data.article as IArticle;
 
-export const useUnfavoriteArticleMutation = () => useMutation(unfavoriteArticle);
+      // 更新文章详情缓存
+      queryClient.setQueryData([QUERY_ARTICLE_KEY, slug], updatedArticle);
+
+      // 更新所有包含该文章的列表缓存
+      queryClient.setQueriesData<{ articles: IArticle[]; articlesCount: number }>(
+        { queryKey: [QUERY_ARTICLES_KEY] },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            articles: oldData.articles.map((article) => (article.slug === slug ? updatedArticle : article)),
+          };
+        },
+      );
+    },
+  });
+};
+
+export const useUnfavoriteArticleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation(unfavoriteArticle, {
+    onSuccess: (data, variables) => {
+      const { slug } = variables;
+      const updatedArticle = data.data.article as IArticle;
+
+      // 更新文章详情缓存
+      queryClient.setQueryData([QUERY_ARTICLE_KEY, slug], updatedArticle);
+
+      // 更新所有包含该文章的列表缓存
+      queryClient.setQueriesData<{ articles: IArticle[]; articlesCount: number }>(
+        { queryKey: [QUERY_ARTICLES_KEY] },
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            articles: oldData.articles.map((article) => (article.slug === slug ? updatedArticle : article)),
+          };
+        },
+      );
+    },
+  });
+};
