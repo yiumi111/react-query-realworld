@@ -80,7 +80,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
             {data.username === comment.author.username ? (
               <span className="mod-options">
                 {/* <i className="ion-edit"></i> */}
-                <i role="presentation" className="ion-trash-a" onClick={() => onDelete(slug, comment.id)}></i>
+                <i role="presentation" className="ion-trash-a" data-testid="delete-comment" onClick={() => onDelete(slug, comment.id)}></i>
               </span>
             ) : (
               <></>

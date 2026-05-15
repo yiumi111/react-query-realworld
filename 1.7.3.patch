@@ -1,0 +1,42 @@
+diff --git a/babel.config.js b/babel.config.js
+index 9ba90d5..0b9feb1 100644
+--- a/babel.config.js
++++ b/babel.config.js
+@@ -2,5 +2,6 @@ module.exports = {
+   presets: [
+     ['@babel/preset-env', {targets: {node: 'current'}}],
+     '@babel/preset-typescript',
++    ['@babel/preset-react', {runtime: 'automatic'}],
+   ],
+ };
+\ No newline at end of file
+diff --git a/package.json b/package.json
+index bbe6f1b..3a2db9c 100644
+--- a/package.json
++++ b/package.json
+@@ -52,6 +52,12 @@
+       "last 1 safari version"
+     ]
+   },
++  "jest": {
++    "moduleNameMapper": {
++      "^@/(.*)$": "<rootDir>/src/$1"
++    },
++    "testEnvironment": "jsdom"
++  },
+   "devDependencies": {
+     "@babel/cli": "^7.20.7",
+     "@babel/core": "^7.20.12",
+diff --git a/src/components/article/Comment.tsx b/src/components/article/Comment.tsx
+index 4846c50..0d8eb65 100644
+--- a/src/components/article/Comment.tsx
++++ b/src/components/article/Comment.tsx
+@@ -80,7 +80,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+             {data.username === comment.author.username ? (
+               <span className="mod-options">
+                 {/* <i className="ion-edit"></i> */}
+-                <i role="presentation" className="ion-trash-a" onClick={() => onDelete(slug, comment.id)}></i>
++                <i role="presentation" className="ion-trash-a" data-testid="delete-comment" onClick={() => onDelete(slug, comment.id)}></i>
+               </span>
+             ) : (
+               <></>
