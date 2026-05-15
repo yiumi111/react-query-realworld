@@ -44,7 +44,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
 
   return (
     <>
-      <form className="card comment-form" onSubmit={onPostComment}>
+      <form className="card comment-form" onSubmit={onPostComment} data-testid="comment-form">
         <div className="card-block">
           <textarea
             className="form-control"
@@ -53,18 +53,19 @@ const Comment = ({ comments, slug }: ICommentProps) => {
             name="body"
             value={newComment.body}
             onChange={onChangeNewComment}
+            data-testid="comment-input"
           ></textarea>
         </div>
         <div className="card-footer">
           <img src={data.image} className="comment-author-img" alt="comment-author" />
-          <button type="submit" className="btn btn-sm btn-primary">
+          <button type="submit" className="btn btn-sm btn-primary" data-testid="post-comment-btn">
             Post Comment
           </button>
         </div>
       </form>
 
       {comments.map((comment, index) => (
-        <div className="card" key={index}>
+        <div className="card" key={index} data-testid={`comment-${comment.id}`}>
           <div className="card-block">
             <p className="card-text">{comment.body}</p>
           </div>
@@ -78,9 +79,14 @@ const Comment = ({ comments, slug }: ICommentProps) => {
             </a>
             <span className="date-posted">{convertToDate(comment.updatedAt)}</span>
             {data.username === comment.author.username ? (
-              <span className="mod-options">
+              <span className="mod-options" data-testid="mod-options">
                 {/* <i className="ion-edit"></i> */}
-                <i role="presentation" className="ion-trash-a" onClick={() => onDelete(slug, comment.id)}></i>
+                <i
+                  role="presentation"
+                  className="ion-trash-a"
+                  onClick={() => onDelete(slug, comment.id)}
+                  data-testid={`delete-comment-btn-${comment.id}`}
+                ></i>
               </span>
             ) : (
               <></>
