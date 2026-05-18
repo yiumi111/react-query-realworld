@@ -1,0 +1,140 @@
+diff --git a/src/components/feed/Feed.tsx b/src/components/feed/Feed.tsx
+index 0c582e3..34ad578 100644
+--- a/src/components/feed/Feed.tsx
++++ b/src/components/feed/Feed.tsx
+@@ -57,7 +57,7 @@ const Feed = ({ article }: IFeedProps) => {
+           <img src={article.author.image} alt="profile" />
+         </a>
+         <div className="info">
+-          <Link to={`/profile/${article.author.username}`} state={article.author.username} className="author">
++          <Link to={`/profile/${article.author.username}`} className="author">
+             {article.author.username}
+           </Link>
+           <span className="date">{convertToDate(article.createdAt)}</span>
+diff --git a/src/components/header/ProfileItem.tsx b/src/components/header/ProfileItem.tsx
+index 14663de..4f47f6a 100644
+--- a/src/components/header/ProfileItem.tsx
++++ b/src/components/header/ProfileItem.tsx
+@@ -9,7 +9,6 @@ const ProfileItem = () => {
+       <NavLink
+         to={`profile/${data.username}`}
+         className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+-        state={data.username}
+       >
+         <img className="user-pic" src={data.image} alt="profile" />
+         {data.username}
+diff --git a/src/components/profile/FollowButton.tsx b/src/components/profile/FollowButton.tsx
+index a8cce82..eae9a41 100644
+--- a/src/components/profile/FollowButton.tsx
++++ b/src/components/profile/FollowButton.tsx
+@@ -1,4 +1,4 @@
+-import { QUERY_PROFILE_KEY } from '@/constants/query.constant';
++import { QUERY_PROFILE_KEY, QUERY_ARTICLES_KEY } from '@/constants/query.constant';
+ import queryClient from '@/queries/queryClient';
+ import routerMeta from '@/lib/routerMeta';
+ import { useFollowUserMutation, useUnFollowUserMutation } from '@/queries/profiles.query';
+@@ -21,6 +21,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
+         {
+           onSuccess: () => {
+             queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
++            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
+           },
+         },
+       );
+@@ -33,6 +34,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
+         {
+           onSuccess: () => {
+             queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
++            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
+           },
+         },
+       );
+diff --git a/src/pages/ArticlePage.tsx b/src/pages/ArticlePage.tsx
+index a71c90f..07c9bff 100644
+--- a/src/pages/ArticlePage.tsx
++++ b/src/pages/ArticlePage.tsx
+@@ -21,14 +21,13 @@ const ArticlePage = () => {
+           <h1>{articleInfo.data.title}</h1>
+ 
+           <div className="article-meta">
+-            <Link to={`/profile/${articleInfo.data.author.username}`} state={articleInfo.data.author.username}>
++            <Link to={`/profile/${articleInfo.data.author.username}`}>
+               <img src={articleInfo.data.author.image} alt="comment-author" />
+             </Link>
+ 
+             <div className="info">
+               <Link
+                 to={`/profile/${articleInfo.data.author.username}`}
+-                state={articleInfo.data.author.username}
+                 className="author"
+               >
+                 {articleInfo.data.author.username}
+@@ -57,13 +56,12 @@ const ArticlePage = () => {
+ 
+         <div className="article-actions">
+           <div className="article-meta">
+-            <Link to={`/profile/${articleInfo.data.author.username}`} state={articleInfo.data.author.username}>
++            <Link to={`/profile/${articleInfo.data.author.username}`}>
+               <img src={articleInfo.data.author.image} alt="profile" />
+             </Link>
+             <div className="info">
+               <Link
+                 to={`/profile/${articleInfo.data.author.username}`}
+-                state={articleInfo.data.author.username}
+                 className="author"
+               >
+                 {articleInfo.data.author.username}
+diff --git a/src/pages/ProfilePage.tsx b/src/pages/ProfilePage.tsx
+index ce1dd7d..2c71f87 100644
+--- a/src/pages/ProfilePage.tsx
++++ b/src/pages/ProfilePage.tsx
+@@ -1,16 +1,21 @@
+ import { useGetProfileQueries } from '@/queries/profiles.query';
+-import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
+-import { useState } from 'react';
++import { NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom';
++import { useState, useEffect } from 'react';
+ import Profile from '@/components/Profile';
+ import FeedList from '@/components/feed/FeedList';
+ 
+ const ProfilePage = () => {
+-  const { state } = useLocation();
++  const { username } = useParams<{ username: string }>();
++  const location = useLocation();
+   const [page, setPage] = useState(1);
+-  const [isFavorited, setIsFavorited] = useState(false);
+-  const [profileInfo, articlesInfo] = useGetProfileQueries(state, page, isFavorited);
++  
++  const isFavorited = location.pathname.endsWith('/favorites');
+ 
+-  console.log(state);
++  useEffect(() => {
++    setPage(1);
++  }, [username, isFavorited]);
++
++  const [profileInfo, articlesInfo] = useGetProfileQueries(username || '', page, isFavorited);
+ 
+   return (
+     <div className="profile-page">
+@@ -24,9 +29,7 @@ const ProfilePage = () => {
+                   <NavLink
+                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                     end
+-                    to={`/profile/${state}`}
+-                    onClick={() => setIsFavorited(false)}
+-                    state={state}
++                    to={`/profile/${username}`}
+                   >
+                     My Articles
+                   </NavLink>
+@@ -35,9 +38,7 @@ const ProfilePage = () => {
+                   <NavLink
+                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                     end
+-                    to={`/profile/${state}/favorites`}
+-                    onClick={() => setIsFavorited(true)}
+-                    state={state}
++                    to={`/profile/${username}/favorites`}
+                   >
+                     Favorited Articles
+                   </NavLink>

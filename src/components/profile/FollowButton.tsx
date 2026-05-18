@@ -1,4 +1,4 @@
-import { QUERY_PROFILE_KEY } from '@/constants/query.constant';
+import { QUERY_PROFILE_KEY, QUERY_ARTICLES_KEY } from '@/constants/query.constant';
 import queryClient from '@/queries/queryClient';
 import routerMeta from '@/lib/routerMeta';
 import { useFollowUserMutation, useUnFollowUserMutation } from '@/queries/profiles.query';
@@ -21,6 +21,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
+            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
           },
         },
       );
@@ -33,6 +34,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
+            queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY] });
           },
         },
       );

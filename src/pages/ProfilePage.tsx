@@ -1,16 +1,21 @@
 import { useGetProfileQueries } from '@/queries/profiles.query';
-import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Profile from '@/components/Profile';
 import FeedList from '@/components/feed/FeedList';
 
 const ProfilePage = () => {
-  const { state } = useLocation();
+  const { username } = useParams<{ username: string }>();
+  const location = useLocation();
   const [page, setPage] = useState(1);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [profileInfo, articlesInfo] = useGetProfileQueries(state, page, isFavorited);
+  
+  const isFavorited = location.pathname.endsWith('/favorites');
 
-  console.log(state);
+  useEffect(() => {
+    setPage(1);
+  }, [username, isFavorited]);
+
+  const [profileInfo, articlesInfo] = useGetProfileQueries(username || '', page, isFavorited);
 
   return (
     <div className="profile-page">
@@ -24,9 +29,7 @@ const ProfilePage = () => {
                   <NavLink
                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                     end
-                    to={`/profile/${state}`}
-                    onClick={() => setIsFavorited(false)}
-                    state={state}
+                    to={`/profile/${username}`}
                   >
                     My Articles
                   </NavLink>
@@ -35,9 +38,7 @@ const ProfilePage = () => {
                   <NavLink
                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                     end
-                    to={`/profile/${state}/favorites`}
-                    onClick={() => setIsFavorited(true)}
-                    state={state}
+                    to={`/profile/${username}/favorites`}
                   >
                     Favorited Articles
                   </NavLink>

@@ -57,7 +57,7 @@ const Feed = ({ article }: IFeedProps) => {
           <img src={article.author.image} alt="profile" />
         </a>
         <div className="info">
-          <Link to={`/profile/${article.author.username}`} state={article.author.username} className="author">
+          <Link to={`/profile/${article.author.username}`} className="author">
             {article.author.username}
           </Link>
           <span className="date">{convertToDate(article.createdAt)}</span>

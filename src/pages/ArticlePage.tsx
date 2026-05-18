@@ -21,14 +21,13 @@ const ArticlePage = () => {
           <h1>{articleInfo.data.title}</h1>
 
           <div className="article-meta">
-            <Link to={`/profile/${articleInfo.data.author.username}`} state={articleInfo.data.author.username}>
+            <Link to={`/profile/${articleInfo.data.author.username}`}>
               <img src={articleInfo.data.author.image} alt="comment-author" />
             </Link>
 
             <div className="info">
               <Link
                 to={`/profile/${articleInfo.data.author.username}`}
-                state={articleInfo.data.author.username}
                 className="author"
               >
                 {articleInfo.data.author.username}
@@ -57,13 +56,12 @@ const ArticlePage = () => {
 
         <div className="article-actions">
           <div className="article-meta">
-            <Link to={`/profile/${articleInfo.data.author.username}`} state={articleInfo.data.author.username}>
+            <Link to={`/profile/${articleInfo.data.author.username}`}>
               <img src={articleInfo.data.author.image} alt="profile" />
             </Link>
             <div className="info">
               <Link
                 to={`/profile/${articleInfo.data.author.username}`}
-                state={articleInfo.data.author.username}
                 className="author"
               >
                 {articleInfo.data.author.username}
