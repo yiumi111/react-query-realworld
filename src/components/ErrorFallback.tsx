@@ -8,8 +8,9 @@ const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <h1 className="logo-font">There was an error!</h1>
+    <div style={{ textAlign: 'center', padding: '2rem' }}>
+      <h1 className="logo-font">Something went wrong</h1>
+      <p>We couldn't load this page or data.</p>
       <div className="btn-group">
         <button type="button" className="btn btn-outline-danger" onClick={() => resetErrorBoundary()}>
           Try again
@@ -19,7 +20,7 @@ const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
           className="btn btn-outline-primary"
           onClick={() => {
             navigate('/', { replace: true });
-            window.location.reload();
+            resetErrorBoundary();
           }}
         >
           Go Home

@@ -1,0 +1,127 @@
+diff --git a/src/Router.tsx b/src/Router.tsx
+index bdd2d05..3caf2cb 100644
+--- a/src/Router.tsx
++++ b/src/Router.tsx
+@@ -1,5 +1,5 @@
+ import { lazy, Suspense } from 'react';
+-import { Routes, Route } from 'react-router-dom';
++import { Routes, Route, useLocation } from 'react-router-dom';
+ import routerMeta, { IRouterMeta } from '@/lib/routerMeta';
+ import LoadingFallback from '@/components/LoadingFallback';
+ import ProtectedRoute from '@/components/HOC/ProtectedRoute';
+@@ -21,32 +21,44 @@ const assignRouter = Object.keys(routerMeta).map((componentKey: string) => {
+ 
+ const Router = () => {
+   const { reset } = useQueryErrorResetBoundary();
++  const location = useLocation();
+ 
+   return (
+-    <Routes>
+-      <Route element={<Layout />}>
+-        {assignRouter.map(({ Component, props }) => (
+-          <Route
+-            key={props.path}
+-            path={props.path}
+-            element={
+-              <ProtectedRoute path={props.path}>
+-                <Suspense fallback={<LoadingFallback />}>
+-                  <ErrorBoundary
+-                    onReset={reset}
+-                    fallbackRender={({ resetErrorBoundary }) => (
+-                      <ErrorFallback resetErrorBoundary={resetErrorBoundary} />
+-                    )}
+-                  >
+-                    <Component />
+-                  </ErrorBoundary>
+-                </Suspense>
+-              </ProtectedRoute>
+-            }
+-          />
+-        ))}
+-      </Route>
+-    </Routes>
++    <ErrorBoundary
++      onReset={reset}
++      resetKeys={[location.pathname]}
++      fallbackRender={({ resetErrorBoundary }) => (
++        <ErrorFallback resetErrorBoundary={resetErrorBoundary} />
++      )}
++    >
++      <Suspense fallback={<LoadingFallback />}>
++        <Routes>
++          <Route element={<Layout />}>
++            {assignRouter.map(({ Component, props }) => (
++              <Route
++                key={props.path}
++                path={props.path}
++                element={
++                  <ProtectedRoute path={props.path}>
++                    <ErrorBoundary
++                      onReset={reset}
++                      resetKeys={[location.pathname]}
++                      fallbackRender={({ resetErrorBoundary }) => (
++                        <ErrorFallback resetErrorBoundary={resetErrorBoundary} />
++                      )}
++                    >
++                      <Suspense fallback={<LoadingFallback />}>
++                        <Component />
++                      </Suspense>
++                    </ErrorBoundary>
++                  </ProtectedRoute>
++                }
++              />
++            ))}
++          </Route>
++        </Routes>
++      </Suspense>
++    </ErrorBoundary>
+   );
+ };
+ 
+diff --git a/src/components/ErrorFallback.tsx b/src/components/ErrorFallback.tsx
+index 7786b1d..cd0e32b 100644
+--- a/src/components/ErrorFallback.tsx
++++ b/src/components/ErrorFallback.tsx
+@@ -8,8 +8,9 @@ const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
+   const navigate = useNavigate();
+ 
+   return (
+-    <div style={{ textAlign: 'center' }}>
+-      <h1 className="logo-font">There was an error!</h1>
++    <div style={{ textAlign: 'center', padding: '2rem' }}>
++      <h1 className="logo-font">Something went wrong</h1>
++      <p>We couldn't load this page or data.</p>
+       <div className="btn-group">
+         <button type="button" className="btn btn-outline-danger" onClick={() => resetErrorBoundary()}>
+           Try again
+@@ -19,7 +20,7 @@ const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
+           className="btn btn-outline-primary"
+           onClick={() => {
+             navigate('/', { replace: true });
+-            window.location.reload();
++            resetErrorBoundary();
+           }}
+         >
+           Go Home
+diff --git a/src/repositories/apiClient.ts b/src/repositories/apiClient.ts
+index f42976f..7cb4c3a 100644
+--- a/src/repositories/apiClient.ts
++++ b/src/repositories/apiClient.ts
+@@ -38,11 +38,13 @@ apiClient.interceptors.response.use(
+   },
+   (error) => {
+     const { message } = error;
+-    const { status, data } = error.response;
+-    const { method, url } = error.config;
++    const status = error.response?.status;
++    const data = error.response?.data;
++    const method = error.config?.method;
++    const url = error.config?.url;
+ 
+-    if (status === 429) {
+-      token.removeToken('ACCESS_TOKEN_KEY');
++    if (status === 401) {
++      token.removeToken(ACCESS_TOKEN_KEY);
+       window.location.reload();
+     }
+ 

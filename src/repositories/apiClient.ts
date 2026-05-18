@@ -38,11 +38,13 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const { message } = error;
-    const { status, data } = error.response;
-    const { method, url } = error.config;
+    const status = error.response?.status;
+    const data = error.response?.data;
+    const method = error.config?.method;
+    const url = error.config?.url;
 
-    if (status === 429) {
-      token.removeToken('ACCESS_TOKEN_KEY');
+    if (status === 401) {
+      token.removeToken(ACCESS_TOKEN_KEY);
       window.location.reload();
     }
 
