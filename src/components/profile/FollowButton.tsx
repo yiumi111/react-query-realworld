@@ -1,4 +1,4 @@
-import { QUERY_PROFILE_KEY } from '@/constants/query.constant';
+import { QUERY_ARTICLES_KEY, QUERY_PROFILE_KEY } from '@/constants/query.constant';
 import queryClient from '@/queries/queryClient';
 import routerMeta from '@/lib/routerMeta';
 import { useFollowUserMutation, useUnFollowUserMutation } from '@/queries/profiles.query';
@@ -13,6 +13,11 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
   const followUserMutation = useFollowUserMutation();
   const unfollowUserMutation = useUnFollowUserMutation();
 
+  const invalidateRelatedCaches = (username: string) => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
+    queryClient.invalidateQueries({ queryKey: [QUERY_ARTICLES_KEY, username] });
+  };
+
   const onToggleFollow = () => {
     const username = profileName;
     if (isFollow) {
@@ -20,7 +25,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
         { username },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
+            invalidateRelatedCaches(username);
           },
         },
       );
@@ -32,7 +37,7 @@ const FollowButton = ({ profileName, isFollow }: IFollowButton) => {
         { username },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_PROFILE_KEY] });
+            invalidateRelatedCaches(username);
           },
         },
       );
