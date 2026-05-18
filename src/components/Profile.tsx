@@ -13,6 +13,7 @@ interface IProfileProps {
 
 const Profile = ({ profile }: IProfileProps) => {
   const { isLogin } = useContext(UserContext);
+
   return (
     <div className="user-info">
       <div className="container">

@@ -1,16 +1,17 @@
 import { useGetProfileQueries } from '@/queries/profiles.query';
-import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { NavLink, useMatch, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import Profile from '@/components/Profile';
 import FeedList from '@/components/feed/FeedList';
 
-const ProfilePage = () => {
-  const { state } = useLocation();
-  const [page, setPage] = useState(1);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [profileInfo, articlesInfo] = useGetProfileQueries(state, page, isFavorited);
+interface IProfileContentProps {
+  username: string;
+  isFavorited: boolean;
+}
 
-  console.log(state);
+const ProfileContent = ({ username, isFavorited }: IProfileContentProps) => {
+  const [page, setPage] = useState(1);
+  const [profileInfo, articlesInfo] = useGetProfileQueries(username, page, isFavorited);
 
   return (
     <div className="profile-page">
@@ -24,9 +25,7 @@ const ProfilePage = () => {
                   <NavLink
                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                     end
-                    to={`/profile/${state}`}
-                    onClick={() => setIsFavorited(false)}
-                    state={state}
+                    to={`/profile/${username}`}
                   >
                     My Articles
                   </NavLink>
@@ -35,9 +34,7 @@ const ProfilePage = () => {
                   <NavLink
                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
                     end
-                    to={`/profile/${state}/favorites`}
-                    onClick={() => setIsFavorited(true)}
-                    state={state}
+                    to={`/profile/${username}/favorites`}
                   >
                     Favorited Articles
                   </NavLink>
@@ -45,17 +42,24 @@ const ProfilePage = () => {
               </ul>
             </div>
 
-            <Routes>
-              <Route path="/" element={<FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />} />
-              <Route
-                path="/favorites"
-                element={<FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />}
-              />
-            </Routes>
+            <FeedList articlesInfo={articlesInfo.data} page={page} setPage={setPage} />
           </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const ProfilePage = () => {
+  const { username = '' } = useParams();
+  const isFavorited = useMatch('/profile/:username/favorites') !== null;
+
+  return (
+    <ProfileContent
+      key={`${username}-${isFavorited ? 'favorites' : 'articles'}`}
+      username={username}
+      isFavorited={isFavorited}
+    />
   );
 };
 
