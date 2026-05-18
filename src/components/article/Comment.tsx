@@ -1,10 +1,10 @@
 import { useCreateCommentMutation, useDeleteCommentMutation } from '@/queries/articles.query';
 import { useGetUserQuery } from '@/queries/user.query';
-import useInputs from '@/lib/hooks/useInputs';
 import queryClient from '@/queries/queryClient';
 import { QUERY_COMMENTS_KEY } from '@/constants/query.constant';
 import convertToDate from '@/lib/utils/convertToDate';
 import { IComment } from '@/interfaces/main';
+import CommentForm from './CommentForm';
 
 interface ICommentProps {
   comments: IComment[];
@@ -13,18 +13,14 @@ interface ICommentProps {
 
 const Comment = ({ comments, slug }: ICommentProps) => {
   const { data } = useGetUserQuery();
-  const [newComment, onChangeNewComment, setNewComment] = useInputs({ body: '' });
   const createCommentMutation = useCreateCommentMutation();
   const deleteCommentMutation = useDeleteCommentMutation();
 
-  const onPostComment = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const { body } = newComment;
+  const onPostComment = (body: string) => {
     createCommentMutation.mutate(
       { body, slug },
       {
         onSuccess: (_) => {
-          setNewComment({ body: '', slug });
           queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY] });
         },
       },
@@ -44,24 +40,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
 
   return (
     <>
-      <form className="card comment-form" onSubmit={onPostComment}>
-        <div className="card-block">
-          <textarea
-            className="form-control"
-            placeholder="Write a comment..."
-            rows={3}
-            name="body"
-            value={newComment.body}
-            onChange={onChangeNewComment}
-          ></textarea>
-        </div>
-        <div className="card-footer">
-          <img src={data.image} className="comment-author-img" alt="comment-author" />
-          <button type="submit" className="btn btn-sm btn-primary">
-            Post Comment
-          </button>
-        </div>
-      </form>
+      <CommentForm userImage={data.image} onSubmit={onPostComment} isSubmitting={createCommentMutation.isLoading} />
 
       {comments.map((comment, index) => (
         <div className="card" key={index}>
