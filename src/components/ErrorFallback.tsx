@@ -19,7 +19,7 @@ const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
           className="btn btn-outline-primary"
           onClick={() => {
             navigate('/', { replace: true });
-            window.location.reload();
+            resetErrorBoundary();
           }}
         >
           Go Home
