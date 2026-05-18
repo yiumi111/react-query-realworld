@@ -1,0 +1,47 @@
+diff --git a/src/components/article/Comment.tsx b/src/components/article/Comment.tsx
+index 4846c50..332f497 100644
+--- a/src/components/article/Comment.tsx
++++ b/src/components/article/Comment.tsx
+@@ -16,16 +16,23 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+   const [newComment, onChangeNewComment, setNewComment] = useInputs({ body: '' });
+   const createCommentMutation = useCreateCommentMutation();
+   const deleteCommentMutation = useDeleteCommentMutation();
++  const isCommentBodyEmpty = !newComment.body.trim();
+ 
+   const onPostComment = async (e: React.FormEvent<HTMLFormElement>) => {
+     e.preventDefault();
+-    const { body } = newComment;
++
++    const body = newComment.body.trim();
++
++    if (!body || createCommentMutation.isLoading) {
++      return;
++    }
++
+     createCommentMutation.mutate(
+       { body, slug },
+       {
+-        onSuccess: (_) => {
+-          setNewComment({ body: '', slug });
+-          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY] });
++        onSuccess: () => {
++          setNewComment({ body: '' });
++          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY, slug] });
+         },
+       },
+     );
+@@ -57,8 +64,12 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+         </div>
+         <div className="card-footer">
+           <img src={data.image} className="comment-author-img" alt="comment-author" />
+-          <button type="submit" className="btn btn-sm btn-primary">
+-            Post Comment
++          <button
++            type="submit"
++            className="btn btn-sm btn-primary"
++            disabled={isCommentBodyEmpty || createCommentMutation.isLoading}
++          >
++            {createCommentMutation.isLoading ? 'Posting Comment...' : 'Post Comment'}
+           </button>
+         </div>
+       </form>
