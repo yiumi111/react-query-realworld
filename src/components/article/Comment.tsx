@@ -20,12 +20,15 @@ const Comment = ({ comments, slug }: ICommentProps) => {
   const onPostComment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const { body } = newComment;
+    if (!body.trim()) return;
     createCommentMutation.mutate(
       { body, slug },
       {
         onSuccess: (_) => {
           setNewComment({ body: '', slug });
           queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY] });
+        },
+        onError: (_) => {
         },
       },
     );
@@ -57,7 +60,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
         </div>
         <div className="card-footer">
           <img src={data.image} className="comment-author-img" alt="comment-author" />
-          <button type="submit" className="btn btn-sm btn-primary">
+          <button type="submit" className="btn btn-sm btn-primary" disabled={createCommentMutation.isLoading}>
             Post Comment
           </button>
         </div>
