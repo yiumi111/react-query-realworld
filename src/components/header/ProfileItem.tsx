@@ -9,7 +9,6 @@ const ProfileItem = () => {
       <NavLink
         to={`profile/${data.username}`}
         className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-        state={data.username}
       >
         <img className="user-pic" src={data.image} alt="profile" />
         {data.username}

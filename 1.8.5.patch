@@ -1,0 +1,103 @@
+diff --git a/src/components/feed/Feed.tsx b/src/components/feed/Feed.tsx
+index 0c582e3..34ad578 100644
+--- a/src/components/feed/Feed.tsx
++++ b/src/components/feed/Feed.tsx
+@@ -57,7 +57,7 @@ const Feed = ({ article }: IFeedProps) => {
+           <img src={article.author.image} alt="profile" />
+         </a>
+         <div className="info">
+-          <Link to={`/profile/${article.author.username}`} state={article.author.username} className="author">
++          <Link to={`/profile/${article.author.username}`} className="author">
+             {article.author.username}
+           </Link>
+           <span className="date">{convertToDate(article.createdAt)}</span>
+diff --git a/src/components/header/ProfileItem.tsx b/src/components/header/ProfileItem.tsx
+index 14663de..4f47f6a 100644
+--- a/src/components/header/ProfileItem.tsx
++++ b/src/components/header/ProfileItem.tsx
+@@ -9,7 +9,6 @@ const ProfileItem = () => {
+       <NavLink
+         to={`profile/${data.username}`}
+         className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+-        state={data.username}
+       >
+         <img className="user-pic" src={data.image} alt="profile" />
+         {data.username}
+diff --git a/src/pages/ArticlePage.tsx b/src/pages/ArticlePage.tsx
+index a71c90f..45b81a6 100644
+--- a/src/pages/ArticlePage.tsx
++++ b/src/pages/ArticlePage.tsx
+@@ -21,14 +21,13 @@ const ArticlePage = () => {
+           <h1>{articleInfo.data.title}</h1>
+ 
+           <div className="article-meta">
+-            <Link to={`/profile/${articleInfo.data.author.username}`} state={articleInfo.data.author.username}>
++            <Link to={`/profile/${articleInfo.data.author.username}`}>
+               <img src={articleInfo.data.author.image} alt="comment-author" />
+             </Link>
+ 
+             <div className="info">
+               <Link
+                 to={`/profile/${articleInfo.data.author.username}`}
+-                state={articleInfo.data.author.username}
+                 className="author"
+               >
+                 {articleInfo.data.author.username}
+diff --git a/src/pages/ProfilePage.tsx b/src/pages/ProfilePage.tsx
+index ce1dd7d..3ce57f3 100644
+--- a/src/pages/ProfilePage.tsx
++++ b/src/pages/ProfilePage.tsx
+@@ -1,16 +1,25 @@
+ import { useGetProfileQueries } from '@/queries/profiles.query';
+-import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
+-import { useState } from 'react';
++import { NavLink, Route, Routes, useParams, useLocation } from 'react-router-dom';
++import { useState, useEffect } from 'react';
+ import Profile from '@/components/Profile';
+ import FeedList from '@/components/feed/FeedList';
+ 
+ const ProfilePage = () => {
+-  const { state } = useLocation();
++  const { username } = useParams<{ username: string }>();
++  const location = useLocation();
+   const [page, setPage] = useState(1);
+-  const [isFavorited, setIsFavorited] = useState(false);
+-  const [profileInfo, articlesInfo] = useGetProfileQueries(state, page, isFavorited);
+ 
+-  console.log(state);
++  const isFavoritesTab = location.pathname.endsWith('/favorites');
++
++  const [profileInfo, articlesInfo] = useGetProfileQueries(username ?? '', page, isFavoritesTab);
++
++  useEffect(() => {
++    setPage(1);
++  }, [username, isFavoritesTab]);
++
++  if (!username) {
++    return null;
++  }
+ 
+   return (
+     <div className="profile-page">
+@@ -24,9 +33,7 @@ const ProfilePage = () => {
+                   <NavLink
+                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                     end
+-                    to={`/profile/${state}`}
+-                    onClick={() => setIsFavorited(false)}
+-                    state={state}
++                    to={`/profile/${username}`}
+                   >
+                     My Articles
+                   </NavLink>
+@@ -35,9 +42,7 @@ const ProfilePage = () => {
+                   <NavLink
+                     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                     end
+-                    to={`/profile/${state}/favorites`}
+-                    onClick={() => setIsFavorited(true)}
+-                    state={state}
++                    to={`/profile/${username}/favorites`}
+                   >
+                     Favorited Articles
+                   </NavLink>
