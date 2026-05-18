@@ -1,0 +1,55 @@
+diff --git a/src/components/article/Comment.tsx b/src/components/article/Comment.tsx
+index 4846c50..04b8839 100644
+--- a/src/components/article/Comment.tsx
++++ b/src/components/article/Comment.tsx
+@@ -20,12 +20,18 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+   const onPostComment = async (e: React.FormEvent<HTMLFormElement>) => {
+     e.preventDefault();
+     const { body } = newComment;
++    const trimmedBody = body.trim();
++    
++    if (!trimmedBody) {
++      return;
++    }
++
+     createCommentMutation.mutate(
+-      { body, slug },
++      { body: trimmedBody, slug },
+       {
+         onSuccess: (_) => {
+-          setNewComment({ body: '', slug });
+-          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY] });
++          setNewComment({ body: '' });
++          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY, slug] });
+         },
+       },
+     );
+@@ -36,7 +42,7 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+       { slug, id },
+       {
+         onSuccess: (_) => {
+-          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY] });
++          queryClient.invalidateQueries({ queryKey: [QUERY_COMMENTS_KEY, slug] });
+         },
+       },
+     );
+@@ -53,12 +59,17 @@ const Comment = ({ comments, slug }: ICommentProps) => {
+             name="body"
+             value={newComment.body}
+             onChange={onChangeNewComment}
++            disabled={createCommentMutation.isPending}
+           ></textarea>
+         </div>
+         <div className="card-footer">
+           <img src={data.image} className="comment-author-img" alt="comment-author" />
+-          <button type="submit" className="btn btn-sm btn-primary">
+-            Post Comment
++          <button 
++            type="submit" 
++            className="btn btn-sm btn-primary"
++            disabled={createCommentMutation.isPending || !newComment.body.trim()}
++          >
++            {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+           </button>
+         </div>
+       </form>
