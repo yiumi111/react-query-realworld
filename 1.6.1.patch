@@ -1,0 +1,223 @@
+diff --git a/src/Router.tsx b/src/Router.tsx
+index bdd2d05..1df70ef 100644
+--- a/src/Router.tsx
++++ b/src/Router.tsx
+@@ -1,5 +1,5 @@
+-import { lazy, Suspense } from 'react';
+-import { Routes, Route } from 'react-router-dom';
++import { lazy, Suspense, useState } from 'react';
++import { Routes, Route, useLocation } from 'react-router-dom';
+ import routerMeta, { IRouterMeta } from '@/lib/routerMeta';
+ import LoadingFallback from '@/components/LoadingFallback';
+ import ProtectedRoute from '@/components/HOC/ProtectedRoute';
+@@ -8,42 +8,77 @@ import { ErrorBoundary } from 'react-error-boundary';
+ import ErrorFallback from '@/components/ErrorFallback';
+ import Layout from '@/components/common/Layout';
+ 
++interface IRouteElementProps {
++  pageName: string;
++  path: string;
++}
++
+ const lazyImport = (pageName: string) => lazy(() => import(`@/pages/${pageName}`));
+ 
+ const assignRouter = Object.keys(routerMeta).map((componentKey: string) => {
+   const props: IRouterMeta = routerMeta[componentKey];
+ 
+   return {
+-    Component: lazyImport(componentKey),
++    pageName: componentKey,
+     props,
+   };
+ });
+ 
+-const Router = () => {
++const RouteFrame = () => {
+   const { reset } = useQueryErrorResetBoundary();
++  const location = useLocation();
+ 
++  return (
++    <ErrorBoundary
++      onReset={reset}
++      resetKeys={[location.key]}
++      fallbackRender={({ error, resetErrorBoundary }) => (
++        <ErrorFallback error={error} resetErrorBoundary={resetErrorBoundary} />
++      )}
++    >
++      <Suspense fallback={<LoadingFallback />}>
++        <Layout />
++      </Suspense>
++    </ErrorBoundary>
++  );
++};
++
++const RouteElement = ({ pageName, path }: IRouteElementProps) => {
++  const { reset } = useQueryErrorResetBoundary();
++  const location = useLocation();
++  const [loadAttempt, setLoadAttempt] = useState(0);
++  const [Component, setComponent] = useState(() => lazyImport(pageName));
++
++  return (
++    <ErrorBoundary
++      onReset={reset}
++      resetKeys={[location.key, loadAttempt]}
++      fallbackRender={({ error, resetErrorBoundary }) => (
++        <ErrorFallback
++          error={error}
++          resetErrorBoundary={resetErrorBoundary}
++          onRetry={() => {
++            setLoadAttempt((currentAttempt) => currentAttempt + 1);
++            setComponent(() => lazyImport(pageName));
++          }}
++        />
++      )}
++    >
++      <Suspense fallback={<LoadingFallback />}>
++        <ProtectedRoute path={path}>
++          <Component />
++        </ProtectedRoute>
++      </Suspense>
++    </ErrorBoundary>
++  );
++};
++
++const Router = () => {
+   return (
+     <Routes>
+-      <Route element={<Layout />}>
+-        {assignRouter.map(({ Component, props }) => (
+-          <Route
+-            key={props.path}
+-            path={props.path}
+-            element={
+-              <ProtectedRoute path={props.path}>
+-                <Suspense fallback={<LoadingFallback />}>
+-                  <ErrorBoundary
+-                    onReset={reset}
+-                    fallbackRender={({ resetErrorBoundary }) => (
+-                      <ErrorFallback resetErrorBoundary={resetErrorBoundary} />
+-                    )}
+-                  >
+-                    <Component />
+-                  </ErrorBoundary>
+-                </Suspense>
+-              </ProtectedRoute>
+-            }
+-          />
++      <Route element={<RouteFrame />}>
++        {assignRouter.map(({ pageName, props }) => (
++          <Route key={props.path} path={props.path} element={<RouteElement pageName={pageName} path={props.path} />} />
+         ))}
+       </Route>
+     </Routes>
+diff --git a/src/components/ErrorFallback.tsx b/src/components/ErrorFallback.tsx
+index 7786b1d..2589832 100644
+--- a/src/components/ErrorFallback.tsx
++++ b/src/components/ErrorFallback.tsx
+@@ -1,27 +1,31 @@
+ import { useNavigate } from 'react-router-dom';
+ 
+ interface IErrorFallbackProps {
++  error?: Error;
+   resetErrorBoundary: (...args: unknown[]) => void;
++  onRetry?: () => void;
+ }
+ 
+-const ErrorFallback = ({ resetErrorBoundary }: IErrorFallbackProps) => {
++const ErrorFallback = ({ error, resetErrorBoundary, onRetry }: IErrorFallbackProps) => {
+   const navigate = useNavigate();
++  const message = error?.message || 'Something went wrong while loading this page.';
+ 
+   return (
+     <div style={{ textAlign: 'center' }}>
+-      <h1 className="logo-font">There was an error!</h1>
++      <h1 className="logo-font">Something went wrong</h1>
++      <p>{message}</p>
+       <div className="btn-group">
+-        <button type="button" className="btn btn-outline-danger" onClick={() => resetErrorBoundary()}>
+-          Try again
+-        </button>
+         <button
+           type="button"
+-          className="btn btn-outline-primary"
++          className="btn btn-outline-danger"
+           onClick={() => {
+-            navigate('/', { replace: true });
+-            window.location.reload();
++            onRetry?.();
++            resetErrorBoundary();
+           }}
+         >
++          Try again
++        </button>
++        <button type="button" className="btn btn-outline-primary" onClick={() => navigate('/')}>
+           Go Home
+         </button>
+       </div>
+diff --git a/src/components/HOC/ProtectedRoute.tsx b/src/components/HOC/ProtectedRoute.tsx
+index 03dea63..2be3fcb 100644
+--- a/src/components/HOC/ProtectedRoute.tsx
++++ b/src/components/HOC/ProtectedRoute.tsx
+@@ -1,10 +1,10 @@
+ import routerMeta from '@/lib/routerMeta';
+ import { Navigate } from 'react-router-dom';
++import { ReactElement, useContext } from 'react';
+ import { UserContext } from '@/contexts/UserContextProvider';
+-import { useContext } from 'react';
+ 
+ interface IProtectedRoute {
+-  children: JSX.Element;
++  children: ReactElement;
+   path: string;
+ }
+ 
+@@ -26,4 +26,5 @@ const ProtectedRoute = ({ children, path }: IProtectedRoute) => {
+ 
+   return children;
+ };
++
+ export default ProtectedRoute;
+diff --git a/src/contexts/UserContextProvider.tsx b/src/contexts/UserContextProvider.tsx
+index e6e6861..8c5ee49 100644
+--- a/src/contexts/UserContextProvider.tsx
++++ b/src/contexts/UserContextProvider.tsx
+@@ -1,8 +1,8 @@
+ import useIsLoginContext from '@/lib/hooks/useIsLoginContext';
+-import { createContext } from 'react';
++import { ReactNode, createContext } from 'react';
+ 
+ interface IUserContextProviderProps {
+-  children: JSX.Element[] | JSX.Element;
++  children: ReactNode;
+ }
+ 
+ export const UserContext = createContext({} as ReturnType<typeof useIsLoginContext>);
+diff --git a/src/repositories/apiClient.ts b/src/repositories/apiClient.ts
+index f42976f..b2337e7 100644
+--- a/src/repositories/apiClient.ts
++++ b/src/repositories/apiClient.ts
+@@ -38,15 +38,19 @@ apiClient.interceptors.response.use(
+   },
+   (error) => {
+     const { message } = error;
+-    const { status, data } = error.response;
+-    const { method, url } = error.config;
++    const status = error.response?.status;
++    const data = error.response?.data;
++    const method = error.config?.method;
++    const url = error.config?.url;
+ 
+     if (status === 429) {
+-      token.removeToken('ACCESS_TOKEN_KEY');
+-      window.location.reload();
++      token.removeToken(ACCESS_TOKEN_KEY);
+     }
+ 
+-    logOnDev(`🚨 [${method?.toUpperCase()}] ${url} | Error ${status} ${data?.message || ''} | ${message}`, error);
++    logOnDev(
++      `🚨 [${method?.toUpperCase()}] ${url} | Error ${status || 'UNKNOWN'} ${data?.message || ''} | ${message}`,
++      error,
++    );
+ 
+     return Promise.reject(error);
+   },

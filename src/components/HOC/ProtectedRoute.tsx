@@ -1,10 +1,10 @@
 import routerMeta from '@/lib/routerMeta';
 import { Navigate } from 'react-router-dom';
+import { ReactElement, useContext } from 'react';
 import { UserContext } from '@/contexts/UserContextProvider';
-import { useContext } from 'react';
 
 interface IProtectedRoute {
-  children: JSX.Element;
+  children: ReactElement;
   path: string;
 }
 
@@ -26,4 +26,5 @@ const ProtectedRoute = ({ children, path }: IProtectedRoute) => {
 
   return children;
 };
+
 export default ProtectedRoute;
